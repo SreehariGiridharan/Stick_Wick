@@ -395,16 +395,18 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1043800321}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b10224920b954214687a6451660c08e5, type: 3}
+  m_Script: {fileID: 11500000, guid: 801b1a547b86163439afb4c2c21f848c, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SimpleOscillator
-  amplitude: 5
-  frequency: 1
-  phaseShift: 0
-  usePosition: 1
-  moveDirection: {x: 1, y: 0}
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerMovement
+  moveSpeed: 8
+  jumpForce: 12
+  groundCheck: {fileID: 1291319323}
+  groundCheckRadius: 0.2
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 0
 --- !u!1 &1291319321
 GameObject:
   m_ObjectHideFlags: 0
