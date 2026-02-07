@@ -12,7 +12,7 @@ on:
   workflow_dispatch:  # Manual trigger
 
 env:
-  UNITY_VERSION: 2022.3.10f1  # Change to your Unity version
+  UNITY_VERSION: 6000.0.28f1  # ⚠️ UPDATE THIS to match your Unity 6 version
 
 jobs:
   build:
@@ -32,8 +32,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: Library
-          key: Library-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          key: Library-WebGL-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
           restore-keys: |
+            Library-WebGL-
             Library-
 
       # Free up disk space (optional but recommended)
@@ -64,10 +65,10 @@ jobs:
           name: WebGL-Build
           path: build/WebGL
 
-      # Optional: Deploy to GitHub Pages
+      # Deploy to GitHub Pages
       - name: Deploy to GitHub Pages
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'
-        uses: peaceiris/actions-gh-pages@v3
+        if: github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./build/WebGL/WebGL-Build
