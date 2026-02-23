@@ -14,47 +14,64 @@ public class PlayerMovement : MonoBehaviour
     public LayerMask groundLayer;
 
     private Rigidbody2D rb;
-    private bool isGrounded;
+    private bool _isGrounded;
+    public bool IsGrounded => _isGrounded;
     private float moveInput;
 
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
-        
-        // Ensure we have a ground check object if not assigned
+        // Prevent the player from tilting/rotating when colliding or moving sideways
+        rb.constraints = RigidbodyConstraints2D.FreezeRotation;
+
+        // Auto-create a ground check point if not assigned
         if (groundCheck == null)
         {
             GameObject newGroundCheck = new GameObject("GroundCheck");
             newGroundCheck.transform.parent = transform;
-            newGroundCheck.transform.localPosition = new Vector3(0, -0.6f, 0); // Approx bottom of a standard sprite
+            newGroundCheck.transform.localPosition = new Vector3(0, -0.6f, 0);
             groundCheck = newGroundCheck.transform;
-            Debug.Log("Created a GroundCheck child object automatically. Adjust its position if needed.");
+            Debug.Log("[PlayerMovement] Created GroundCheck automatically. Adjust its Y position if needed.");
+        }
+
+        // Auto-detect ground layer if not set
+        if (groundLayer.value == 0)
+        {
+            int mask = LayerMask.GetMask("Ground");
+            if (mask == 0) mask = LayerMask.GetMask("Default");
+            if (mask != 0)
+            {
+                groundLayer = mask;
+                Debug.LogWarning("[PlayerMovement] Ground Layer auto-set. Set it manually in Inspector for best results.");
+            }
+            else
+            {
+                Debug.LogError("[PlayerMovement] Ground Layer is not set! Please set it in the Inspector.");
+            }
         }
     }
 
     void Update()
     {
-        // 1. Input Processing (New Input System)
-        // Check for keyboard inputs
-        if (Keyboard.current == null) return; // Basic safety check
+        if (Keyboard.current == null) return;
 
         moveInput = 0f;
-        
-        // Horizontal Movement (Arrows or A/D)
+
+        // Horizontal Movement
         if (Keyboard.current.leftArrowKey.isPressed || Keyboard.current.aKey.isPressed)
             moveInput = -1f;
         else if (Keyboard.current.rightArrowKey.isPressed || Keyboard.current.dKey.isPressed)
             moveInput = 1f;
 
-        // Jump Input (Up Arrow or Space)
-        bool jumpPressed = Keyboard.current.upArrowKey.wasPressedThisFrame || Keyboard.current.spaceKey.wasPressedThisFrame;
+        // Jump
+        bool jumpPressed = Keyboard.current.upArrowKey.wasPressedThisFrame
+                        || Keyboard.current.spaceKey.wasPressedThisFrame
+                        || Keyboard.current.wKey.wasPressedThisFrame;
 
-        if (jumpPressed && isGrounded)
-        {
+        if (jumpPressed && _isGrounded)
             Jump();
-        }
 
-        // Flip the sprite to face direction
+        // Flip sprite direction
         if (moveInput > 0)
             transform.localScale = new Vector3(1, 1, 1);
         else if (moveInput < 0)
@@ -63,31 +80,30 @@ public class PlayerMovement : MonoBehaviour
 
     void FixedUpdate()
     {
-        // 2. Physics Movement
-        // Ground Check
-        isGrounded = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer);
+        // Ground check — also grab the platform we're standing on (if any)
+        Collider2D groundHit = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer);
+        _isGrounded = groundHit != null;
 
-        // Apply Velocity (Using linearVelocity as updated by user for newer Unity versions)
-        // If compilation fails here (older Unity), user can revert to 'velocity'
-        #if UNITY_2023_3_OR_NEWER
-            // Unity 6+ uses linearVelocity
-            rb.linearVelocity = new Vector2(moveInput * moveSpeed, rb.linearVelocity.y);
-        #else
-            // Older versions use velocity
-            rb.velocity = new Vector2(moveInput * moveSpeed, rb.velocity.y);
-        #endif
+        // Platform velocity inheritance: if the ground is a moving kinematic body,
+        // add its velocity so the player rides along instead of falling off.
+        Vector2 platformVelocity = Vector2.zero;
+        if (_isGrounded)
+        {
+            Rigidbody2D platformRb = groundHit.attachedRigidbody;
+            if (platformRb != null && platformRb.bodyType == RigidbodyType2D.Kinematic)
+                platformVelocity = platformRb.linearVelocity;
+        }
+
+        // Apply horizontal movement + platform offset, preserve vertical velocity (gravity/jump)
+        rb.linearVelocity = new Vector2(moveInput * moveSpeed + platformVelocity.x, rb.linearVelocity.y + platformVelocity.y);
     }
 
     void Jump()
     {
-        #if UNITY_2023_3_OR_NEWER
-            rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
-        #else
-            rb.velocity = new Vector2(rb.velocity.x, jumpForce);
-        #endif
+        rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
     }
 
-    // Visualize the ground check circle in the editor
+    // Draw ground check circle in Scene view for easy debugging
     void OnDrawGizmosSelected()
     {
         if (groundCheck != null)
