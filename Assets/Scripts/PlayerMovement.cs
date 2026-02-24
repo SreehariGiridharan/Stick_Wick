@@ -29,9 +29,20 @@ public class PlayerMovement : MonoBehaviour
         {
             GameObject newGroundCheck = new GameObject("GroundCheck");
             newGroundCheck.transform.parent = transform;
-            newGroundCheck.transform.localPosition = new Vector3(0, -0.6f, 0);
+
+            // Place the check point at the very bottom of the player's collider.
+            // We read the collider size/offset so it lines up exactly — no guessing.
+            float bottomOffset = -0.5f; // safe default
+            CapsuleCollider2D cap = GetComponent<CapsuleCollider2D>();
+            BoxCollider2D box    = GetComponent<BoxCollider2D>();
+            if (cap != null)
+                bottomOffset = cap.offset.y - (cap.size.y * 0.5f);
+            else if (box != null)
+                bottomOffset = box.offset.y - (box.size.y * 0.5f);
+
+            newGroundCheck.transform.localPosition = new Vector3(0, bottomOffset, 0);
             groundCheck = newGroundCheck.transform;
-            Debug.Log("[PlayerMovement] Created GroundCheck automatically. Adjust its Y position if needed.");
+            Debug.Log($"[PlayerMovement] Created GroundCheck automatically at Y={bottomOffset:F3}. Adjust its Y position in the Inspector if needed.");
         }
 
         // Auto-detect ground layer if not set
